@@ -6,15 +6,16 @@ import argparse
 import sys
 from pathlib import Path
 
-import torch
+import numpy as np
+from PIL import Image
 
-# Ensure we can import from src/
+# Ensure src/ is importable
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from ttnn_impl.ttnn_sd14_pipeline import (  # type: ignore[import]
+from pipelines.ttnn_sd14_pipeline import (  # type: ignore[import]
     TTNNStableDiffusionConfig,
     TTNNStableDiffusionPipeline,
 )
@@ -22,7 +23,7 @@ from ttnn_impl.ttnn_sd14_pipeline import (  # type: ignore[import]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run TTNN Stable Diffusion 1.4 (skeleton implementation)."
+        description="Run TTNN Stable Diffusion 1.4 (skeleton implementation).",
     )
     parser.add_argument(
         "--prompt",
@@ -40,7 +41,7 @@ def parse_args() -> argparse.Namespace:
         "--steps",
         type=int,
         default=30,
-        help="Number of diffusion steps (mirrors CPU config). Default: 30",
+        help="Number of diffusion steps. Default: 30",
     )
     parser.add_argument(
         "--guidance-scale",
@@ -61,18 +62,23 @@ def parse_args() -> argparse.Namespace:
         help="Target image width in pixels. Default: 512",
     )
     parser.add_argument(
-        "--device",
-        type=str,
-        default="ttnn",
-        help="Logical TTNN device identifier. Default: 'ttnn'",
-    )
-    parser.add_argument(
-        "--save-latents",
+        "--output",
         type=str,
         default=None,
-        help="Optional path to save dummy latents as a .pt file.",
+        help="Optional output image path (PNG). If omitted, no file is saved.",
     )
     return parser.parse_args()
+
+
+def save_image_from_numpy(arr: np.ndarray, output_path: Path) -> None:
+    """
+    Convert a [H, W, 3] float image in [0, 1] to uint8 PNG.
+    """
+    arr = np.clip(arr, 0.0, 1.0)
+    arr_uint8 = (arr * 255).astype("uint8")
+    img = Image.fromarray(arr_uint8)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output_path)
 
 
 def main() -> None:
@@ -87,8 +93,7 @@ def main() -> None:
 
     pipe = TTNNStableDiffusionPipeline(
         config=cfg,
-        device=args.device,
-        dtype=torch.float32,
+        device="ttnn",
     )
 
     print(
@@ -99,16 +104,18 @@ def main() -> None:
     if args.seed is not None:
         print(f"[ttnn-sd14] Seed: {args.seed}")
 
-    out = pipe(prompt=args.prompt, seed=args.seed)
+    image_np = pipe(
+        prompt=args.prompt,
+        seed=args.seed,
+        output_path=None,
+    )
 
-    latents = out["latents"]
-    print(f"[ttnn-sd14] Latents shape: {tuple(latents.shape)}, dtype={latents.dtype}")
+    print(f"[ttnn-sd14] Output image shape: {image_np.shape}")
 
-    if args.save_latents is not None:
-        out_path = Path(args.save_latents)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(latents, out_path)
-        print(f"[ttnn-sd14] Latents saved to: {out_path}")
+    if args.output is not None:
+        out_path = Path(args.output)
+        save_image_from_numpy(image_np, out_path)
+        print(f"[ttnn-sd14] Saved dummy TTNN image to: {out_path}")
 
 
 if __name__ == "__main__":
