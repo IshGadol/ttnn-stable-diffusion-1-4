@@ -99,3 +99,17 @@ Repository Amenities
 - API surfaces for CPU and TTNN backends are now stable and enforced by tests.
 - CPU baseline is ready but not exercised here until HF authentication and model license acceptance are set up.
 - TTNN skeleton is ready for N300 bring-up as soon as hardware access is available.
+
+## Phase 3 — UNet structural scaffolding (2025-12-11)
+
+- Added TTNNResBlock and TTNNCrossAttentionBlock in `src/ttnn_impl/blocks.py`.
+- Implemented TTNNDownBlock, TTNNMidBlock, and TTNNUpBlock to mirror SD 1.4 down/mid/up structure.
+- Replaced TTNNUNet stub with a structurally accurate UNet in `src/ttnn_impl/unet_tt.py` aligned to SD 1.4 config:
+  - Down path: 3 CrossAttnDownBlock2D-like stages + 1 DownBlock2D-like stage.
+  - Mid block: UNetMidBlock2DCrossAttn-like.
+  - Up path: 1 UpBlock2D-like + 3 CrossAttnUpBlock2D-like stages.
+- Updated `tests/test_ttnn_shapes.py` to use the new `TTNNUNetConfig` signature.
+- All tests passing:
+
+    `python -m unittest discover -s tests -p "test_*.py" -v`
+
