@@ -14,3 +14,7 @@ venv/
 # OS/editor junk
 .DS_Store
 *.swp
+
+# Local artifacts (do not commit)
+reports/
+_temp_docs/
