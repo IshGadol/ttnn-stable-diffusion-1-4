@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+.env/
+
+# Pytest
+.pytest_cache/
+
+# OS/editor junk
+.DS_Store
+*.swp

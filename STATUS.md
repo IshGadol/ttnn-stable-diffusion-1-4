@@ -1,3 +1,4 @@
+HEAD
 # Stable Diffusion 1.4 TTNN Bounty — Status Log
 
 Repository: ttnn-stable-diffusion-1-4
@@ -113,3 +114,53 @@ Repository Amenities
 
     `python -m unittest discover -s tests -p "test_*.py" -v`
 
+# Stable Diffusion 1.4 TTNN Bounty — Status
+
+## Phase 4: Parity Harness, Config Dump, and Contract Layer
+
+### Objective
+Establish a reproducible CPU “golden baseline” and explicit interface contracts so TTNN bring-up can be validated by parity rather than visual inspection.
+
+### Phase 4 Components
+- [x] Prompt suite defined (DDIM-only, fixed seeds)
+- [x] CPU golden run harness
+- [x] Authoritative diffusers config dump
+- [x] TTNN interface contracts (shape + dtype)
+- [x] Parity comparator tooling
+- [x] Environment probe script
+
+### Design Decisions (Locked)
+- Scheduler: **DDIM only**
+- Baseline artifacts:
+  - final PNG
+  - final latent x0 tensor
+  - checkpoint latents at 0%, 25%, 50%, 75%, 100%
+- Baseline dtype: float32 (CPU)
+
+### N300 Bring-Up Prerequisites (Deferred)
+- Stable TTNN runtime availability
+- Known-good KMD/UMD alignment
+- Ability to execute minimal TTNN graph
+- Contract tests must pass before any kernel optimization
+
+### Notes
+Phase 4 is intentionally CPU-anchored. No TTNN kernels or device execution are required to complete this phase.
+
+## Phase 4 — Parity Spine & Contract Layer (2025-12-19)
+
+Completed:
+
+- CPU golden run harness (SD-1.4, DDIM)
+- Full prompt suite baseline artifacts
+- Latent parity comparator (per-item + suite)
+- Formal interface contracts for:
+  - Text encoder
+  - UNet
+  - Scheduler
+  - VAE
+- Automated contract tests (pytest)
+
+Result:
+
+TTNN integration can now be validated mechanically via tensor parity,
+with no ambiguity about shapes, dtypes, or semantics.
