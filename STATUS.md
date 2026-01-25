@@ -1,4 +1,3 @@
-HEAD
 # Stable Diffusion 1.4 TTNN Bounty — Status Log
 
 Repository: ttnn-stable-diffusion-1-4

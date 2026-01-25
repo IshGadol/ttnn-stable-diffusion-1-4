@@ -118,6 +118,7 @@ class CPUStableDiffusionPipelineWrapper:
         *,
         seed: Optional[int] = None,
         output_path: Optional[str] = None,
+        boundary_capture: Optional[dict] = None,
     ):
         """
         Generate a single 512x512 image from a text prompt.
@@ -154,23 +155,44 @@ class CPUStableDiffusionPipelineWrapper:
             latent_model_input = torch.cat([latents] * 2, dim=0)
 
             # UNet forward
+            if boundary_capture is not None:
+                # Capture boundary tensors deterministically (CPU-friendly serialization)
+                boundary_capture.setdefault("captures", [])
+                boundary_capture["captures"].append({
+                    "timestep": int(t.item()) if hasattr(t, "item") else int(t),
+                    "latent_model_input": latent_model_input.detach().cpu(),
+                    "context": context.detach().cpu(),
+                })
+
             noise_pred = self.unet(
                 latents=latent_model_input,
                 timesteps=t,
                 context=context,
             )  # (2, 4, 64, 64)
 
+            if boundary_capture is not None:
+                boundary_capture["captures"][-1]["noise_pred"] = noise_pred.detach().cpu()
+
             # Split uncond/cond and apply guidance
             noise_uncond, noise_text = noise_pred.chunk(2, dim=0)
             noise_pred = noise_uncond + self.config.guidance_scale * (noise_text - noise_uncond)
 
             # Scheduler step
-            step_result = self.scheduler.step(
-                model_output=noise_pred,
-                timestep=t,
-                sample=latents,
-                generator=generator,
-            )
+            # Scheduler step (diffusers version compatibility: some schedulers do not accept generator=)
+            step_kwargs = {
+                "model_output": noise_pred,
+                "timestep": t,
+                "sample": latents,
+            }
+            try:
+                import inspect
+                if "generator" in inspect.signature(self.scheduler.step).parameters:
+                    step_kwargs["generator"] = generator
+            except Exception:
+                # If signature inspection fails, fall back to not passing generator
+                pass
+
+            step_result = self.scheduler.step(**step_kwargs)
             latents = step_result.prev_sample
 
         # Decode latents to images

@@ -18,3 +18,15 @@ venv/
 # Local artifacts (do not commit)
 reports/
 _temp_docs/
+
+# Python bytecode / caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local HF cache (never commit)
+.hf_cache/
